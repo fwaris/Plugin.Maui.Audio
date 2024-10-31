@@ -6,6 +6,8 @@ partial class AudioPlayer : IAudioPlayer
 
 	public AudioPlayer(string fileName, AudioPlayerOptions audioPlayerOptions) { }
 
+	public AudioPlayer(System.Threading.Channels.Channel<byte[]> channel, AudioPlayerOptions audioPlayerOptions) { }
+
 	protected virtual void Dispose(bool disposing) { }
 
 	public double Duration { get; }

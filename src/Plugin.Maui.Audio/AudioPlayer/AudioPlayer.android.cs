@@ -175,6 +175,11 @@ partial class AudioPlayer : IAudioPlayer
 
 		player.Prepare();
 	}
+
+	internal AudioPlayer(System.Threading.Channels.Channel<byte[]> channels, AudioPlayerOptions audioPlayerOptions)
+	{
+		throw new NotImplementedException();
+	}
 	
 	internal AudioPlayer(Stream audioStream, AudioPlayerOptions audioPlayerOptions)
 	{

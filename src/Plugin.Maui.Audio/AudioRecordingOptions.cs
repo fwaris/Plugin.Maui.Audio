@@ -10,6 +10,18 @@ static class DefaultAudioRecordingOptions
 		Encoding = AudioRecordingOptions.DefaultEncoding,
 		ThrowIfNotSupported = true
 	};
+
+	/// <summary>
+	/// Default PCM options for audio recording sent as chunked data
+	/// </summary>
+	public static AudioRecordingOptions DefaultPcmOptions = new()
+	{
+		SampleRate = 24000,
+		Channels = ChannelType.Mono,
+		BitDepth = BitDepth.Pcm16bit,
+		Encoding = Encoding.LinearPCM,
+		ThrowIfNotSupported = true
+	};
 }
 
 public class AudioRecordingOptions

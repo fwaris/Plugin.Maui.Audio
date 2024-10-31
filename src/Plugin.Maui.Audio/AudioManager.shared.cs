@@ -1,4 +1,6 @@
-﻿namespace Plugin.Maui.Audio;
+﻿using System.Threading.Channels;
+
+namespace Plugin.Maui.Audio;
 
 /// <summary>
 /// Implementation of <see cref="IAudioManager"/> providing the ability to create audio playback and recording instances.
@@ -33,6 +35,12 @@ public class AudioManager : IAudioManager
 
         return new AudioPlayer(fileName, options ?? DefaultPlayerOptions);
     }
+	public IAudioPlayer CreatePlayer(System.Threading.Channels.Channel<byte[]> channel, AudioPlayerOptions? options = default)
+	{
+		ArgumentNullException.ThrowIfNull(channel);
+
+        return new AudioPlayer(channel, options ?? DefaultPlayerOptions);
+    }
 
 	/// <inheritdoc cref="IAudioManager.CreateAsyncPlayer(string, AudioPlayerOptions)" />
 	public AsyncAudioPlayer CreateAsyncPlayer(Stream audioStream, AudioPlayerOptions? options = default) => new (CreatePlayer(audioStream));
@@ -40,9 +48,16 @@ public class AudioManager : IAudioManager
 	/// <inheritdoc cref="IAudioManager.CreateAsyncPlayer(string, AudioPlayerOptions)" />
 	public AsyncAudioPlayer CreateAsyncPlayer(string fileName, AudioPlayerOptions? options = default) => new (CreatePlayer(fileName));
 
+
+	public AsyncAudioPlayer CreateAsyncPlayer(Channel<byte[]> channel, AudioPlayerOptions? options = null)
+	{
+		throw new NotImplementedException();
+	}
+
 	/// <inheritdoc cref="IAudioManager.CreateRecorder(AudioRecorderOptions)" />
 	public IAudioRecorder CreateRecorder(AudioRecorderOptions? options = default)
 	{
 		return new AudioRecorder(options ?? DefaultRecorderOptions);
 	}
+
 }

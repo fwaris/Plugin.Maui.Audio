@@ -2,6 +2,7 @@
 using Android.Content;
 using Android.Media;
 using Java.IO;
+using System.Threading.Channels;
 
 namespace Plugin.Maui.Audio;
 
@@ -32,6 +33,12 @@ partial class AudioRecorder : IAudioRecorder
 	public Task StartAsync() => StartAsync(GetTempFilePath(), DefaultAudioRecordingOptions.DefaultOptions);
 	public Task StartAsync(string filePath) => StartAsync(filePath, DefaultAudioRecordingOptions.DefaultOptions);
 
+	public Task StartPcmAsync(Channel<byte[]> channel) => StartPcmAsync(channel, DefaultAudioRecordingOptions.DefaultOptions);
+
+	public Task StopPcmAsync()
+	{
+		throw new NotImplementedException();
+	}
 
 	public Task StartAsync(string filePath, AudioRecordingOptions options)
 	{
@@ -78,7 +85,6 @@ partial class AudioRecorder : IAudioRecorder
 
 		return Task.CompletedTask;
 	}
-
 	AudioRecord GetAudioRecord(int sampleRate, ChannelIn channels, Android.Media.Encoding encoding, int bitDepth)
 	{
 		this.sampleRate = sampleRate;
@@ -205,7 +211,7 @@ partial class AudioRecorder : IAudioRecorder
 		}
 	}
 
-	static void WriteWaveFileHeader(FileOutputStream outputStream, long audioLength, long dataLength, long sampleRate, int channels, long byteRate)
+	static byte[] WaveFileHeader(long audioLength, long dataLength, long sampleRate, int channels, long byteRate)
 	{
 		byte[] header = new byte[44];
 
@@ -253,7 +259,12 @@ partial class AudioRecorder : IAudioRecorder
 		header[41] = (byte)((audioLength >> 8) & 0xff);
 		header[42] = (byte)((audioLength >> 16) & 0xff);
 		header[43] = (byte)((audioLength >> 24) & 0xff);
+		return header;
+	}
 
+	static void WriteWaveFileHeader(FileOutputStream outputStream, long audioLength, long dataLength, long sampleRate, int channels, long byteRate)
+	{
+		byte[] header = WaveFileHeader(audioLength, dataLength, sampleRate, channels, byteRate);
 		outputStream.Write(header, 0, 44);
 	}
 
@@ -283,5 +294,10 @@ partial class AudioRecorder : IAudioRecorder
 			ChannelType.Stereo => ChannelIn.Stereo,
 			_ => throwIfNotSupported ? throw new NotSupportedException("channel type not supported") : SharedChannelTypesToAndroidChannelTypes(AudioRecordingOptions.DefaultChannels, true)
 		};
+	}
+
+	public Task StartPcmAsync(Channel<byte[]> channel, AudioRecordingOptions options)
+	{
+		throw new NotImplementedException();
 	}
 }

@@ -1,7 +1,19 @@
-﻿using Microsoft.Maui.Controls.PlatformConfiguration;
+﻿using System.Threading.Channels;
+using Microsoft.Maui.Controls.PlatformConfiguration;
+using Windows.Media;
 using Windows.Media.Capture;
 using Windows.Media.MediaProperties;
 using Windows.Storage;
+using Windows.Foundation.Collections;
+using Windows.Media.Core;
+using System.Runtime.InteropServices.WindowsRuntime;
+using Windows.Media.Effects;
+using Windows.Media.Audio;
+using Windows.Storage.Streams;
+using Windows.Foundation;
+using WinRT;
+using System.ComponentModel;
+
 
 namespace Plugin.Maui.Audio;
 
@@ -9,6 +21,7 @@ partial class AudioRecorder : IAudioRecorder
 {
 	MediaCapture? mediaCapture;
 	string audioFilePath = string.Empty;
+	IRandomAccessStream outputStream;
 
 	public bool CanRecordAudio { get; private set; } = true;
 	public bool IsRecording => mediaCapture != null;
@@ -196,4 +209,91 @@ partial class AudioRecorder : IAudioRecorder
 		audioFilePath = string.Empty;
 		mediaCapture = null;
 	}
+
+	public async Task StartPcmAsync(Channel<byte[]> channel) => await StartPcmAsync(channel, DefaultAudioRecordingOptions.DefaultPcmOptions);
+
+	public async Task StartPcmAsync(Channel<byte[]> channel, AudioRecordingOptions options)
+	{
+		if (mediaCapture is not null)
+		{
+			throw new InvalidOperationException("Recording already in progress");
+		}
+
+		try
+		{
+			var captureSettings = new MediaCaptureInitializationSettings()
+			{
+				StreamingCaptureMode = StreamingCaptureMode.Audio
+			};
+			await InitMediaCapture(captureSettings);
+			outputStream = new PcmAudioStream(channel);
+			//outputStream = new InMemoryRandomAccessStream();
+		}
+		catch (Exception ex)
+		{
+			CanRecordAudio = false;
+			DeleteMediaCapture();
+
+			if (ex.InnerException != null && ex.InnerException.GetType() == typeof(UnauthorizedAccessException))
+			{
+				throw ex.InnerException;
+			}
+			throw;
+		}
+
+		try
+		{
+			try
+			{
+				var profile = SharedOptionsToWindowsMediaProfile(options);				
+				await mediaCapture?.StartRecordToStreamAsync(profile, this.outputStream);
+			}
+			catch
+			{
+				if (options.ThrowIfNotSupported)
+				{
+					throw;
+				}
+
+				var profile = MediaEncodingProfile.CreateWav(AudioEncodingQuality.Auto);
+
+				uint sampleRate = (uint)DefaultAudioRecordingOptions.DefaultOptions.SampleRate;
+				uint channelCount = (uint)DefaultAudioRecordingOptions.DefaultOptions.Channels;
+				uint bitsPerSample = (uint)DefaultAudioRecordingOptions.DefaultOptions.BitDepth;
+
+				profile.Audio = AudioEncodingProperties.CreatePcm(sampleRate, channelCount, bitsPerSample);
+				await mediaCapture?.StartRecordToStreamAsync(profile, this.outputStream);
+			}
+		}
+		catch
+		{
+			CanRecordAudio = false;
+			DeleteMediaCapture();
+			throw;
+		}
+	}
+
+	public async Task StopPcmAsync()
+	{
+		if (mediaCapture == null)
+		{
+			throw new InvalidOperationException("No recording in progress");
+		}
+
+		try
+		{
+			await mediaCapture?.StopRecordAsync();
+
+		} 
+		catch (Exception ex)
+		{
+			throw;
+		}
+
+		mediaCapture.Dispose();
+		mediaCapture = null;
+		outputStream = null;
+
+	}
 }
+

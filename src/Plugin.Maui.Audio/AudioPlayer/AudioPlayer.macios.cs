@@ -70,6 +70,11 @@ partial class AudioPlayer : IAudioPlayer
 		PreparePlayer();
 	}
 
+	internal AudioPlayer(System.Threading.Channels.Channel<byte[]> channels, AudioPlayerOptions audioPlayerOptions)
+	{
+		throw new NotImplementedException();
+	}
+
 	internal AudioPlayer(string fileName, AudioPlayerOptions audioPlayerOptions)
 	{
 		player = AVAudioPlayer.FromUrl(NSUrl.FromFilename(fileName))

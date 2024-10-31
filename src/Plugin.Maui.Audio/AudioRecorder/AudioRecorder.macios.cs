@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Threading.Channels;
 using AudioToolbox;
 using AVFoundation;
 using Foundation;
@@ -116,4 +117,10 @@ partial class AudioRecorder : IAudioRecorder
 			_ => throwIfNotSupported ? throw new NotSupportedException("Encoding type not supported") : SharedEncodingToiOSEncoding(AudioRecordingOptions.DefaultEncoding, true)
 		};
 	}
+
+	public Task StartPcmAsync(Channel<byte[]> channel, AudioRecordingOptions options) => Task.CompletedTask;
+
+	public Task StopPcmAsync() => Task.CompletedTask;
+
+	public Task StartPcmAsync(Channel<byte[]> channel) => StartPcmAsync(channel, DefaultAudioRecordingOptions.DefaultPcmOptions);
 }

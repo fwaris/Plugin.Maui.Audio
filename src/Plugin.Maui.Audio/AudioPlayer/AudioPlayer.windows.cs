@@ -62,7 +62,20 @@ partial class AudioPlayer : IAudioPlayer
 		SetSpeed(1.0);
 	}
 
-    public AudioPlayer(string fileName, AudioPlayerOptions audioPlayerOptions)
+	public AudioPlayer(System.Threading.Channels.Channel<byte[]> channel, AudioPlayerOptions audioPlayerOptions)
+	{
+		var audioStream = new PcmAudioStream(channel);
+		player = CreatePlayer();
+		if (player is null)
+		{
+			throw new FailedToLoadAudioException($"Failed to create {nameof(MediaPlayer)} instance. Reason unknown.");
+		}
+        player.Source = MediaSource.CreateFromStream(audioStream, string.Empty);
+        player.MediaEnded += OnPlaybackEnded;
+		SetSpeed(1.0);
+	}
+
+	public AudioPlayer(string fileName, AudioPlayerOptions audioPlayerOptions)
     {
         player = CreatePlayer();
 

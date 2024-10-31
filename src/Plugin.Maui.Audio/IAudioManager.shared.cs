@@ -28,6 +28,7 @@ public interface IAudioManager
 	/// <param name="fileName">The name of the file containing the audio to play.</param>
 	/// <returns>A new <see cref="IAudioPlayer"/> with the supplied <paramref name="fileName"/> ready to play.</returns>
 	IAudioPlayer CreatePlayer(string fileName, AudioPlayerOptions? options = default);
+	IAudioPlayer CreatePlayer(System.Threading.Channels.Channel<byte[]> channel, AudioPlayerOptions? options = default);
 
 	/// <summary>
 	/// Creates a new <see cref="AsyncAudioPlayer"/> with the supplied <paramref name="audioStream"/> ready to play audio using async/await.
@@ -35,6 +36,8 @@ public interface IAudioManager
 	/// <param name="audioStream">The <see cref="Stream"/> containing the audio to play.</param>
 	/// <returns>A new <see cref="AsyncAudioPlayer"/> with the supplied <paramref name="audioStream"/> ready to play.</returns>
 	AsyncAudioPlayer CreateAsyncPlayer(Stream audioStream, AudioPlayerOptions? options = default);
+
+	AsyncAudioPlayer CreateAsyncPlayer(System.Threading.Channels.Channel<byte[]> channel, AudioPlayerOptions? options = default);
 
 	/// <summary>
 	/// Creates a new <see cref="AsyncAudioPlayer"/> with the supplied <paramref name="fileName"/> ready to play audio using async/await.

@@ -49,10 +49,7 @@ public class AudioManager : IAudioManager
 	public AsyncAudioPlayer CreateAsyncPlayer(string fileName, AudioPlayerOptions? options = default) => new (CreatePlayer(fileName));
 
 
-	public AsyncAudioPlayer CreateAsyncPlayer(Channel<byte[]> channel, AudioPlayerOptions? options = null)
-	{
-		throw new NotImplementedException();
-	}
+	public AsyncAudioPlayer CreateAsyncPlayer(Channel<byte[]> channel, AudioPlayerOptions? options = null) => new(CreatePlayer(channel));
 
 	/// <inheritdoc cref="IAudioManager.CreateRecorder(AudioRecorderOptions)" />
 	public IAudioRecorder CreateRecorder(AudioRecorderOptions? options = default)

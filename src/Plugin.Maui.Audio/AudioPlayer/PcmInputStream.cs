@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel.Design;
+using System.Diagnostics;
 using System.Linq;
 using System.Reflection;
 using System.Text;
@@ -10,6 +11,7 @@ namespace Plugin.Maui.Audio;
 
 public class PcmInputStream : System.IO.Stream
 {
+	int threshold = 4096 * 2 * 2 * 2 * 2;
 	System.Threading.Channels.Channel<byte[]> channel;
 	Memory<byte> cache = Memory<byte>.Empty;
 	bool closed = false;
@@ -20,41 +22,40 @@ public class PcmInputStream : System.IO.Stream
 	}
 
 	public override bool CanRead => true;
-	
-	public override bool CanSeek => false;
+
+	public override bool CanSeek
+	{
+		get {
+			//Debug.WriteLine("pcm: CanSeek");
+			return false;
+		}
+	}
 
 	public override bool CanWrite => false;
 
-	public override long Length => -1;
+	public override long Length
+	{
+		get
+		{
+			//Debug.WriteLine("pcm: Length");
+			return  -1;
+		}
+	}			
 
-	public override long Position { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+	public override long Position { get { Debug.WriteLine("pcm: Position"); throw new NotImplementedException(); } set => throw new NotImplementedException(); }
 
 	public override void Flush()
 	{
 		throw new NotImplementedException();
 	}
 
-	int CopyToBuffer(byte[] data, byte[] buffer, int offset, int count)
+	int CopyToBuffer(Memory<byte> data, byte[] buffer, int offset, int count)
 	{
 		var sz = Math.Min(data.Length, count);
-		var fromSpan = data.AsSpan<byte>();
 		var toSpan = buffer.AsSpan<byte>(offset, sz);
-		fromSpan.Slice(0, sz).CopyTo(toSpan);
-		if (data.Length == count)
-		{
-			cache = Memory<byte>.Empty;
-			return 0;
-		}
-		else if (data.Length > count)
-		{
-			cache = Memory<byte>.Empty;
-			return data.Length - count;
-		}
-		else
-		{
-			cache = data.AsMemory<byte>(sz);
-			return count - data.Length;
-		}
+		data.Span.CopyTo(toSpan);
+		cache = data.Slice(sz);
+		return sz;
 	}
 
 	async Task<Tuple<byte[],bool>> ReadNext()
@@ -71,50 +72,36 @@ public class PcmInputStream : System.IO.Stream
 		}
 	}
 
-	async Task<int> ReadFromChannel(byte[] buffer, int offset, int count)
+	int totalBytes = 0;
+	async Task<int> WriteToBuffer(byte[] buffer, int offset, int count)
 	{
-		var (data,haveData) = await ReadNext();
-		if (haveData)
-		{
-			return CopyToBuffer(data, buffer, offset, count);
-		}
-		else
-		{
-			closed = true;
-			return 0;
-		}
-	}
+		int bytesWritten = 0;
 
-	int CopyFromCache(byte[] buffer, int offset, int count)
-	{
-		if (cache.Length == 0)
+		//empty cache first
+		while (cache.Length > 0 && bytesWritten < count && bytesWritten < threshold)
 		{
-			throw new InvalidOperationException("Cache is empty");
+			bytesWritten = CopyToBuffer(cache, buffer, offset + bytesWritten, count - bytesWritten);
 		}
-		else
+
+		byte[] data = Array.Empty<byte>();
+		bool haveData = true;
+
+		while (haveData && bytesWritten < count && bytesWritten < threshold )
 		{
-			var sz = Math.Min(cache.Length, count);
-			var toSpan = buffer.AsSpan<byte>(offset, sz);
-			cache.Span.Slice(0, sz).CopyTo(toSpan);
-			cache = cache.Slice(sz);
-			return sz;
+			(data, haveData) = await ReadNext();
+			if (haveData)
+			{
+				bytesWritten += CopyToBuffer(data, buffer, offset + bytesWritten, count - bytesWritten);
+			}
 		}
+		totalBytes += bytesWritten;
+		Debug.WriteLine($"pcm: written {bytesWritten} bytes; total : {totalBytes}");
+		return bytesWritten;
 	}
 
 	public override int Read(byte[] buffer, int offset, int count)
 	{
-		if (cache.Length > 0)
-		{
-			return CopyFromCache(buffer, offset, count);
-		}
-		else if (closed)
-		{
-			return 0;
-		}
-		else
-		{
-			return ReadFromChannel(buffer, offset, count).Result;
-		}
+		return WriteToBuffer(buffer, offset, count).Result;
 	}
 
 	public override long Seek(long offset, SeekOrigin origin)
